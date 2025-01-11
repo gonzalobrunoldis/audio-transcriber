@@ -1,5 +1,0 @@
-# Ignore everything
-*
-
-# But track the desired folder
-!/path/to/your/folder/
