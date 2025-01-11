@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Recorder</title>
+    <link href="https://cdn.jsdelivr.net/npm/lucide-css@0.16.29/dist/lucide.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --dark-bg: #1E1E1E;
+            --darker-bg: #2D2D2D;
+            --border-color: #333;
+            --text: #ffffff;
+            --text-secondary: #888;
+            --accent: #ff4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: var(--dark-bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        /* Header Styles */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .import-button {
+            display: flex;
+            align-items: center;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0.5rem;
+        }
+
+        .header-center {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 350px;
+            border-right: 1px solid var(--border-color);
+            padding: 1rem;
+            background: var(--dark-bg);
+            overflow-y: auto;
+        }
+
+        .recording-info {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .recording-date {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        /* Timeline */
+        .timeline-container {
+            flex: 1;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .timeline-markers {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+        }
+
+        .timeline {
+            flex: 1;
+            background: var(--darker-bg);
+            position: relative;
+        }
+
+        .timeline-cursor {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: white;
+            transition: left 0.1s linear;
+        }
+
+        /* Controls */
+        .controls {
+            height: 64px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            gap: 1rem;
+        }
+
+        .input-select {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.5rem;
+            width: 200px;
+        }
+
+        .record-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: var(--accent);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .record-button.recording {
+            background: var(--accent);
+            color: white;
+        }
+
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .icon-button {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .recording-item {
+            background: var(--darker-bg);
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .recording-item audio {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .recording-controls {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 0.5rem;
+        }
+
+        .delete-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        /* Add visualization styles */
+        .visualizer {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .wave-bar {
+            flex: 1;
+            background: var(--accent);
+            margin: 0 2px;
+            opacity: 0.5;
+            transition: height 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <button class="import-button">
+            <i data-lucide="plus" class="icon"></i>
+            Import file
+        </button>
+        <div class="header-center">
+            <h1>Audio Transcriber</h1>
+            <div class="header-actions">
+                <button class="icon-button">
+                    <i data-lucide="share-2" class="icon"></i>
+                </button>
+                <button class="icon-button">
+                    <i data-lucide="more-horizontal" class="icon"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="recording-info">
+                <span>Recording</span>
+                <span id="duration">0:00</span>
+            </div>
+            <div class="recording-date" id="current-date"></div>
+            <div id="recordings-list"></div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="timeline-container">
+            <div class="timeline-markers" id="timeline-markers"></div>
+            <div class="timeline">
+                <div class="timeline-cursor" id="timeline-cursor"></div>
+                <div class="visualizer" id="visualizer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <select class="input-select">
+            <option value="microphone">
+                <i data-lucide="mic"></i>
+                Microphone (System)
+            </option>
+        </select>
+
+        <button id="recordButton" class="record-button">
+            <i data-lucide="mic" class="icon"></i>
+        </button>
+
+        <div class="playback-controls">
+            <span id="time-display">00:00:00 / 00:00:00</span>
+            <button class="icon-button">
+                <i data-lucide="play" class="icon"></i>
+            </button>
+            <button class="icon-button">
+                <i data-lucide="skip-back" class="icon"></i>
+            </button>
+        </div>
+
+        <select class="input-select" style="width: 100px;">
+            <option value="1">1×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+        </select>
+
+        <button class="icon-button" style="margin-left: auto;">
+            <i data-lucide="flag" class="icon"></i>
+        </button>
+        <span style="color: var(--text-secondary);">Mark</span>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        let isRecording = false;
+        let recordingStartTime = null;
+        const recordButton = document.getElementById('recordButton');
+        const recordingsList = document.getElementById('recordings-list');
+        const timeDisplay = document.getElementById('time-display');
+        const currentDate = document.getElementById('current-date');
+        const durationElement = document.getElementById('duration');
+        
+        // Update current date
+        function updateDate() {
+            const now = new Date();
+            currentDate.textContent = now.toLocaleDateString() + ' at ' + 
+                now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        updateDate();
+
+        // Format time display
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        // Update recording duration
+        function updateDuration() {
+            if (isRecording && recordingStartTime) {
+                const duration = (Date.now() - recordingStartTime) / 1000;
+                durationElement.textContent = formatTime(duration);
+                timeDisplay.textContent = `${formatTime(duration)} / ${formatTime(duration)}`;
+                requestAnimationFrame(updateDuration);
+            }
+        }
+
+        // Add audio context and analyzer
+        let audioContext;
+        let analyzer;
+        let mediaStream;
+        const visualizer = document.getElementById('visualizer');
+        const NUM_BARS = 100;
+
+        // Create visualization bars
+        for (let i = 0; i < NUM_BARS; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'wave-bar';
+            bar.style.height = '2px';
+            visualizer.appendChild(bar);
+        }
+
+        // Initialize audio analyzer
+        async function initializeAudioAnalyzer() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyzer = audioContext.createAnalyser();
+            analyzer.fftSize = 256;
+            
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const source = audioContext.createMediaStreamSource(mediaStream);
+                source.connect(analyzer);
+            } catch (err) {
+                console.error('Error accessing microphone:', err);
+            }
+        }
+
+        // Update visualization
+        function updateVisualization() {
+            if (!analyzer || !isRecording) return;
+            
+            const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+            analyzer.getByteFrequencyData(dataArray);
+            
+            const bars = visualizer.children;
+            const step = Math.floor(dataArray.length / bars.length);
+            
+            for (let i = 0; i < bars.length; i++) {
+                const value = dataArray[i * step];
+                const height = Math.max(2, (value / 255) * 100);
+                bars[i].style.height = `${height}px`;
+            }
+            
+            if (isRecording) {
+                requestAnimationFrame(updateVisualization);
+            }
+        }
+
+        recordButton.addEventListener('click', async () => {
+            if (!isRecording) {
+                const response = await fetch('/start_recording', { method: 'POST' });
+                if (response.ok) {
+                    if (!audioContext) {
+                        await initializeAudioAnalyzer();
+                    }
+                    isRecording = true;
+                    recordingStartTime = Date.now();
+                    recordButton.classList.add('recording');
+                    recordButton.innerHTML = '<i data-lucide="square" class="icon"></i>';
+                    lucide.createIcons();
+                    updateDuration();
+                    updateVisualization();
+                }
+            } else {
+                const response = await fetch('/stop_recording', { method: 'POST' });
+                if (response.ok) {
+                    isRecording = false;
+                    recordingStartTime = null;
+                    recordButton.classList.remove('recording');
+                    recordButton.innerHTML = '<i data-lucide="mic" class="icon"></i>';
+                    lucide.createIcons();
+                    updateRecordings();
+                    // Reset visualization
+                    const bars = visualizer.children;
+                    for (let bar of bars) {
+                        bar.style.height = '2px';
+                    }
+                }
+            }
+        });
+
+        function createAudioPlayer(filename) {
+            const div = document.createElement('div');
+            div.className = 'recording-item';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = filename;
+            
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.preload = 'metadata';
+            audio.src = `/play/${filename}`;
+            
+            // Wait for metadata to be loaded before allowing playback
+            audio.addEventListener('loadedmetadata', () => {
+                audio.removeAttribute('disabled');
+            });
+            
+            const controls = document.createElement('div');
+            controls.className = 'recording-controls';
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.onclick = async () => {
+                const response = await fetch(`/delete/${filename}`, { method: 'POST' });
+                if (response.ok) {
+                    div.remove();
+                }
+            };
+            
+            div.appendChild(nameSpan);
+            div.appendChild(audio);
+            controls.appendChild(deleteBtn);
+            div.appendChild(controls);
+            
+            return div;
+        }
+
+        async function updateRecordings() {
+            const response = await fetch('/get_recordings');
+            const files = await response.json();
+            
+            recordingsList.innerHTML = '';
+            files.forEach(filename => {
+                recordingsList.appendChild(createAudioPlayer(filename));
+            });
+        }
+
+        // Initial recordings update
+        updateRecordings();
+
+        // Update recordings list every 5 seconds
+        setInterval(updateRecordings, 5000);
+    </script>
+</body>
+</html> 
